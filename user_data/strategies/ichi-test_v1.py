@@ -13,7 +13,7 @@ import numpy as np
 from freqtrade.strategy import stoploss_from_open
 
 
-class ichiV1(IStrategy):
+class ichiV1_test(IStrategy):
 
     # NOTE: settings as of the 25th july 21
     # Buy hyperspace params:
@@ -44,6 +44,43 @@ class ichiV1(IStrategy):
 
     # Optimal timeframe for the strategy
     timeframe = '5m'
+
+    @property
+    def protections(self):
+        return [
+            {
+                "method": "CooldownPeriod",
+                "stop_duration_candles": 5
+            },
+            {
+                "method": "MaxDrawdown",
+                "lookback_period_candles": 48,
+                "trade_limit": 20,
+                "stop_duration_candles": 4,
+                "max_allowed_drawdown": 0.2
+            },
+            {
+                "method": "StoplossGuard",
+                "lookback_period_candles": 24,
+                "trade_limit": 4,
+                "stop_duration_candles": 2,
+                "only_per_pair": False
+            },
+            {
+                "method": "LowProfitPairs",
+                "lookback_period_candles": 6,
+                "trade_limit": 2,
+                "stop_duration_candles": 60,
+                "required_profit": 0.02
+            },
+            {
+                "method": "LowProfitPairs",
+                "lookback_period_candles": 24,
+                "trade_limit": 4,
+                "stop_duration_candles": 2,
+                "required_profit": 0.01
+            }
+        ]
 
     startup_candle_count = 96
     process_only_new_candles = False

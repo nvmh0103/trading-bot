@@ -1,5 +1,5 @@
 {
-  "max_open_trades": 10,
+  "max_open_trades": 5,
   "stake_currency": "USDT",
   "stake_amount": "unlimited",
   "tradable_balance_ratio": 0.99,
@@ -36,66 +36,30 @@
     "secret": "",
     "ccxt_config": {},
     "ccxt_async_config": {},
-    "pair_whitelist": [
-      "BTC/USDT",
-      "ETH/USDT",
-      "BNB/USDT",
-      "SOL/USDT",
-      "XRP/USDT",
-      "DOGE/USDT",
-      "ADA/USDT",
-      "SHIB/USDT",
-      "AVAX/USDT",
-      "TRX/USDT",
-      "DOT/USDT",
-      "LINK/USDT",
-      "MATIC/USDT",
-      "LTC/USDT",
-      "NEAR/USDT",
-      "ICP/USDT",
-      "DAI/USDT",
-      "UNI/USDT",
-      "APT/USDT",
-      "STX/USDT",
-      "FIL/USDT",
-      "ATOM/USDT",
-      "XLM/USDT",
-      "ARB/USDT",
-      "INJ/USDT",
-      "OP/USDT",
-      "PEPE/USDT",
-      "WIF/USDT",
-      "THETA/USDT",
-      "TIA/USDT",
-      "SUI/USDT",
-      "W/USDT",
-      "BONK/USDT",
-      "APE/USDT",
-      "SEI/USDT",
-      "WLD/USDT",
-      "STRK/USDT",
-      "BOME/USDT",
-      "MANTA/USDT",
-      "FET/USDT",
-      "RNDR/USDT",
-      "GRT/USDT",
-      "AR/USDT"
-    ],
+    "pair_whitelist": [],
     "pair_blacklist": ["BNB/.*"]
   },
   "pairlists": [
     {
-      "method": "StaticPairList",
-      "number_assets": 20,
+      "method": "VolumePairList",
+      "number_assets": 70,
       "sort_key": "quoteVolume",
       "min_value": 0,
-      "refresh_period": 1800
+      "refresh_period": 86400,
+      "lookback_days": 10
+    },
+    {
+        "method": "VolatilityFilter",
+        "lookback_days": 10,
+        "min_volatility": 0.05,
+        "max_volatility": 0.50,
+        "refresh_period": 86400
     }
   ],
   "telegram": {
-    "enabled": false,
-    "token": "",
-    "chat_id": ""
+    "enabled": true,
+    "token": "6341993116:AAFUXS37ND1s0Mfvv4FRnWQykFpF-c8PwJ0",
+    "chat_id": "6132128583"
   },
   "api_server": {
     "enabled": true,
@@ -113,6 +77,6 @@
   "initial_state": "running",
   "force_entry_enable": false,
   "internals": {
-    "process_throttle_secs": 5
+    "process_throttle_secs": 1
   }
 }
