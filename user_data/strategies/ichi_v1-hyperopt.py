@@ -3,7 +3,7 @@ from freqtrade.strategy.interface import IStrategy
 from pandas import DataFrame
 import talib.abstract as ta
 import freqtrade.vendor.qtpylib.indicators as qtpylib
-from freqtrade.strategy import DecimalParameter, IntParameter, CategoricalParameter
+from freqtrade.strategy import DecimalParameter, IntParameter, CategoricalParameter, BooleanParameter
 import pandas as pd  # noqa
 pd.options.mode.chained_assignment = None  # default='warn'
 import technical.indicators as ftt
@@ -11,6 +11,17 @@ from functools import reduce
 from datetime import datetime, timedelta
 import numpy as np
 
+
+def SSLChannels(dataframe, length = 7):
+    df = dataframe.copy()
+    df['ATR'] = ta.ATR(df, timeperiod=14)
+    df['smaHigh'] = df['high'].rolling(length).mean() + df['ATR']
+    df['smaLow'] = df['low'].rolling(length).mean() - df['ATR']
+    df['hlv'] = np.where(df['close'] > df['smaHigh'], 1, np.where(df['close'] < df['smaLow'], -1, np.NAN))
+    df['hlv'] = df['hlv'].ffill()
+    df['sslDown'] = np.where(df['hlv'] < 0, df['smaHigh'], df['smaLow'])
+    df['sslUp'] = np.where(df['hlv'] < 0, df['smaLow'], df['smaHigh'])
+    return df['sslDown'], df['sslUp']
 
 class ichiV1_hyperopt(IStrategy):
 
@@ -52,9 +63,9 @@ class ichiV1_hyperopt(IStrategy):
     buy_trend_above_senkou_level = IntParameter(1, 8, default=1, space="buy")
     buy_trend_bullish_level = IntParameter(1, 8, default=6, space="buy")
     buy_fan_magnitude_shift_value = IntParameter(1, 10, default=3, space="buy")
-    buy_min_fan_magnitude_gain = 1.002
+    buy_min_fan_magnitude_gain = DecimalParameter(1.001, 1.02, default=1.002, space="buy")
 
-    sell_trend_indicator = CategoricalParameter(["trend_close_5m", "trend_close_15m", "trend_close_30m", "trend_close_1h", "trend_close_2h", "trend_close_4h", "trend_close_6h", "trend_close_8h"], default="trend_close_5m", space="sell")
+    sell_trend_indicator = CategoricalParameter(['trend_close_30m', 'trend_close_1h', 'trend_close_2h', 'trend_close_4h', 'trend_close_6h', 'trend_close_8h'], default='trend_close_2h', space='sell')
 
     plot_config = {
         'main_plot': {
@@ -90,7 +101,7 @@ class ichiV1_hyperopt(IStrategy):
 
         heikinashi = qtpylib.heikinashi(dataframe)
         dataframe['open'] = heikinashi['open']
-        #dataframe['close'] = heikinashi['close']
+        dataframe['close'] = heikinashi['close']
         dataframe['high'] = heikinashi['high']
         dataframe['low'] = heikinashi['low']
 
@@ -194,11 +205,17 @@ class ichiV1_hyperopt(IStrategy):
             conditions.append(dataframe['trend_close_8h'] > dataframe['trend_open_8h'])
 
         # Trends magnitude
-        conditions.append(dataframe['fan_magnitude_gain'] >= self.buy_min_fan_magnitude_gain)
+        conditions.append(dataframe['fan_magnitude_gain'] >= self.buy_min_fan_magnitude_gain.value)
         conditions.append(dataframe['fan_magnitude'] > 1)
 
         for x in range(self.buy_fan_magnitude_shift_value.value):
             conditions.append(dataframe['fan_magnitude'].shift(x+1) < dataframe['fan_magnitude'])
+
+        ssl_down, ssl_up = SSLChannels(dataframe, 10)
+        dataframe['ssl_down'] = ssl_down
+        dataframe['ssl_up'] = ssl_up
+        dataframe['ssl_high'] = (ssl_up > ssl_down).astype('int') * 3
+        conditions.append(dataframe['ssl_high'] > 0)
 
         if conditions:
             dataframe.loc[
@@ -213,6 +230,8 @@ class ichiV1_hyperopt(IStrategy):
         conditions = []
 
         conditions.append(qtpylib.crossed_below(dataframe['trend_close_5m'], dataframe[self.sell_trend_indicator.value]))
+        conditions.append(dataframe['ssl_high'] == 0)
+        conditions.append( (dataframe['tenkan_sen'] < dataframe['kijun_sen']) | (dataframe['close'] < dataframe['kijun_sen']))
 
         if conditions:
             dataframe.loc[
